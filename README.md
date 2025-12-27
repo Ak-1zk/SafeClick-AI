@@ -61,3 +61,15 @@ It combines **advanced AI-driven analysis** with **rule-based safety checks** to
 git clone https://github.com/Ak-1zk/SafeClick-AI.git
 cd SafeClick-AI
 
+---
+
+## 👥 Team Members / Authors
+
+This project was collaboratively developed by:
+
+- **Iqlas Tharannum**
+- **Azra Khan**
+- **Zainab Mani**
+- **Mohammed Adnan**
+
+
