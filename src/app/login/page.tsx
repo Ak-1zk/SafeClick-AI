@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthForm from '@/components/auth-form';
 import {
@@ -10,6 +10,7 @@ import {
   initiateEmailSignIn,
   initiateEmailSignUp,
 } from '@/firebase/non-blocking-login';
+import { useUser, useAuth } from '@/firebase';
 import {
   Card,
   CardContent,
@@ -25,20 +26,6 @@ import type { AuthFormValues } from '@/components/auth-form';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-
-  // 🔥 Ensure this runs ONLY on client
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // ⛔ During build / SSR → render nothing
-  if (!mounted) {
-    return null;
-  }
-
-  // Dynamically import Firebase hooks AFTER mount
-  const { useUser, useAuth } = require('@/firebase');
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
 
@@ -53,30 +40,22 @@ export default function LoginPage() {
     action: 'login' | 'signup'
   ) => {
     if (!auth) return;
-    if (action === 'login') {
-      initiateEmailSignIn(auth, values.email, values.password);
-    } else {
-      initiateEmailSignUp(auth, values.email, values.password);
-    }
+
+    action === 'login'
+      ? initiateEmailSignIn(auth, values.email, values.password)
+      : initiateEmailSignUp(auth, values.email, values.password);
   };
 
-  const handleAnonymousSignIn = () => {
-    if (auth) {
-      initiateAnonymousSignIn(auth);
-    }
-  };
-
-  if (isUserLoading || user) {
+  if (isUserLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-lg">Redirecting...</p>
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-4">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-6">
           <Logo />
@@ -105,7 +84,7 @@ export default function LoginPage() {
             <Button
               variant="secondary"
               className="w-full"
-              onClick={handleAnonymousSignIn}
+              onClick={() => auth && initiateAnonymousSignIn(auth)}
             >
               <User className="mr-2 h-4 w-4" />
               Continue Anonymously
