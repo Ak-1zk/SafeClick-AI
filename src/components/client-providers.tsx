@@ -1,11 +1,26 @@
 'use client';
 
-import { FirebaseClientProvider } from "@/firebase";
+import { ReactNode, useEffect, useState } from 'react';
+import { initializeFirebase } from '@/firebase';
 
-export default function ClientProviders({
+export function FirebaseClientProvider({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
-  return <FirebaseClientProvider>{children}</FirebaseClientProvider>;
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    // Initialize Firebase only in the browser
+    initializeFirebase();
+    setReady(true);
+  }, []);
+
+  // 🔥 DO NOT THROW — EVER
+  // During build or hydration, Firebase may not be ready
+  if (!ready) {
+    return null;
+  }
+
+  return <>{children}</>;
 }
