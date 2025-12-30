@@ -2,19 +2,27 @@
 
 import { useEffect } from 'react';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import type { FirestorePermissionError } from '@/firebase/errors';
 
 /**
  * Listens for Firebase permission errors.
- * BUILD-SAFE: never throws, never crashes prerender.
+ * ✅ Client-safe
+ * ✅ Build-safe
+ * ✅ Never throws (prevents white screen crashes)
  */
 export function FirebaseErrorListener() {
   useEffect(() => {
-    const handleError = (error: FirestorePermissionError) => {
-      // ✅ NEVER throw — just log or report
-      console.warn('Firestore permission error:', error);
+    const handleError = (error?: FirestorePermissionError) => {
+      if (!error) return;
 
-      // OPTIONAL: you can later show a toast or redirect here
+      // ❗ Log only — NEVER throw in client components
+      console.warn('🔥 Firestore permission error:', {
+        code: error.code,
+        message: error.message,
+      });
+
+      // OPTIONAL (later if you want):
+      // router.push('/login');
       // toast({ title: 'Permission denied', description: error.message });
     };
 
@@ -25,7 +33,7 @@ export function FirebaseErrorListener() {
     };
   }, []);
 
-  // 🔥 This component renders nothing and never throws
+  // Renders nothing
   return null;
 }
 
