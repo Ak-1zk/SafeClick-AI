@@ -2,37 +2,31 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
+
 import Dashboard from '@/components/dashboard';
 import Footer from '@/components/layout/footer';
 import Header from '@/components/layout/header';
-import { Loader2 } from 'lucide-react';
+
+// ✅ STATIC hook import — REQUIRED
+import { useUser } from '@/firebase';
 
 export default function Home() {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
 
-  // 🔥 Prevent Firebase hooks from running during prerender
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // ⛔ During build / prerender → render NOTHING
-  if (!mounted) {
-    return null;
-  }
-
-  // 🔐 Import Firebase hook only after client mount
-  const { useUser } = require('@/firebase');
+  // ✅ Hooks MUST be called unconditionally
   const { user, isUserLoading } = useUser();
 
+  // 🔁 Redirect unauthenticated users
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
   }, [isUserLoading, user, router]);
 
+  // ⏳ Loading / redirect state
   if (isUserLoading || !user) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-transparent text-foreground">
@@ -42,6 +36,7 @@ export default function Home() {
     );
   }
 
+  // ✅ Authenticated UI
   return (
     <div className="flex min-h-screen flex-col bg-transparent text-foreground">
       <Header />
