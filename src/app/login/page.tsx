@@ -1,6 +1,6 @@
-export const dynamic = 'force-dynamic';
-
 'use client';
+
+export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -27,17 +27,17 @@ export default function LoginPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
-  // 🔥 IMPORTANT: delay Firebase hooks until client mount
+  // 🔥 Ensure this runs ONLY on client
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // ⛔ During prerender / build → render NOTHING
+  // ⛔ During build / SSR → render nothing
   if (!mounted) {
     return null;
   }
 
-  // Import Firebase hooks ONLY after mount
+  // Dynamically import Firebase hooks AFTER mount
   const { useUser, useAuth } = require('@/firebase');
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
