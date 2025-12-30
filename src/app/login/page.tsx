@@ -2,9 +2,8 @@ export const dynamic = 'force-dynamic';
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useAuth } from '@/firebase';
 import AuthForm from '@/components/auth-form';
 import {
   initiateAnonymousSignIn,
@@ -25,9 +24,23 @@ import { Loader2, User } from 'lucide-react';
 import type { AuthFormValues } from '@/components/auth-form';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  // 🔥 IMPORTANT: delay Firebase hooks until client mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // ⛔ During prerender / build → render NOTHING
+  if (!mounted) {
+    return null;
+  }
+
+  // Import Firebase hooks ONLY after mount
+  const { useUser, useAuth } = require('@/firebase');
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
-  const router = useRouter();
 
   useEffect(() => {
     if (!isUserLoading && user) {
@@ -40,7 +53,6 @@ export default function LoginPage() {
     action: 'login' | 'signup'
   ) => {
     if (!auth) return;
-
     if (action === 'login') {
       initiateEmailSignIn(auth, values.email, values.password);
     } else {
@@ -56,7 +68,7 @@ export default function LoginPage() {
 
   if (isUserLoading || user) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-transparent text-foreground">
+      <div className="flex min-h-screen flex-col items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-lg">Redirecting...</p>
       </div>
@@ -64,7 +76,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-transparent px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-6">
           <Logo />
@@ -104,4 +116,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
