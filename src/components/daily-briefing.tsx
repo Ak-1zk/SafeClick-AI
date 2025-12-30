@@ -8,7 +8,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { getDailyBriefing } from '@/app/actions';
+import { getDailyBriefing } from '../../app/actions';
 import { Loader2, Newspaper } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
