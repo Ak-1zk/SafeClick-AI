@@ -7,7 +7,6 @@ import type {
   AnalysisClassification,
 } from '@/app/types';
 
-// Rule-based fallback keywords
 const suspiciousKeywords = [
   'login',
   'verify',
@@ -23,10 +22,6 @@ const suspiciousKeywords = [
   'claim',
 ];
 
-/* ------------------------------------------------ */
-/* 🔗 HELPER: Call Gemini via /api/analyze           */
-/* ------------------------------------------------ */
-
 async function callAI(prompt: string): Promise<string> {
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL ||
@@ -39,12 +34,11 @@ async function callAI(prompt: string): Promise<string> {
   });
 
   const data = await res.json();
-  return data.reply || data.message || '';
-}
 
-/* ------------------------------------------------ */
-/* 🌐 URL ANALYSIS                                  */
-/* ------------------------------------------------ */
+  if (typeof data?.reply === 'string') return data.reply;
+  if (typeof data?.message === 'string') return data.message;
+  return '';
+}
 
 export async function analyzeUrl(input: { url: string }): Promise<UrlAnalysis> {
   try {
@@ -60,14 +54,12 @@ export async function analyzeUrl(input: { url: string }): Promise<UrlAnalysis> {
       recommendation: aiReply,
     };
   } catch (error) {
-    console.error('URL AI analysis failed, using fallback:', error);
-
     const url = input.url.toLowerCase();
     let risk_score = 10;
     let classification: AnalysisClassification = 'GENUINE';
     const reasons = ['AI analysis failed. Using rule-based checks.'];
 
-    if (suspiciousKeywords.some((k) => url.includes(k))) {
+    if (suspiciousKeywords.some(k => url.includes(k))) {
       risk_score += 40;
       classification = 'SUSPICIOUS';
       reasons.push('URL contains suspicious keywords.');
@@ -92,10 +84,6 @@ export async function analyzeUrl(input: { url: string }): Promise<UrlAnalysis> {
   }
 }
 
-/* ------------------------------------------------ */
-/* 📧 EMAIL ANALYSIS                                */
-/* ------------------------------------------------ */
-
 export async function analyzeEmail(input: {
   emailContent: string;
 }): Promise<EmailAnalysis> {
@@ -110,39 +98,16 @@ export async function analyzeEmail(input: {
       reasons: ['AI-based email analysis completed successfully.'],
       recommendation: aiReply,
     };
-  } catch (error) {
-    console.error('Email AI analysis failed, using fallback:', error);
-
-    const content = input.emailContent.toLowerCase();
-    let risk_score = 15;
-    let classification: AnalysisClassification = 'GENUINE';
-    const reasons = ['AI analysis failed. Using rule-based checks.'];
-
-    const matches = suspiciousKeywords.filter((k) =>
-      content.includes(k)
-    );
-
-    if (matches.length) {
-      risk_score += matches.length * 15;
-      classification = 'SUSPICIOUS';
-      reasons.push(`Suspicious keywords found: ${matches.join(', ')}`);
-    }
-
-    if (risk_score > 70) classification = 'SCAM';
-
+  } catch {
     return {
-      classification,
-      risk_score,
-      reasons,
+      classification: 'SUSPICIOUS',
+      risk_score: 50,
+      reasons: ['AI analysis failed. Using fallback checks.'],
       recommendation:
         'Proceed carefully. This email may attempt phishing.',
     };
   }
 }
-
-/* ------------------------------------------------ */
-/* 💬 MESSAGE ANALYSIS                              */
-/* ------------------------------------------------ */
 
 export async function analyzeMessage(input: {
   messageContent: string;
@@ -158,35 +123,16 @@ export async function analyzeMessage(input: {
       reasons: ['AI-based message analysis completed successfully.'],
       recommendation: aiReply,
     };
-  } catch (error) {
-    console.error('Message AI analysis failed, using fallback:', error);
-
-    const msg = input.messageContent.toLowerCase();
-    let risk_score = 15;
-    let classification: AnalysisClassification = 'GENUINE';
-    const reasons = ['AI analysis failed. Using rule-based checks.'];
-
-    if (suspiciousKeywords.some((k) => msg.includes(k))) {
-      risk_score += 30;
-      classification = 'SUSPICIOUS';
-      reasons.push('Suspicious keywords detected.');
-    }
-
-    if (risk_score > 70) classification = 'SCAM';
-
+  } catch {
     return {
-      classification,
-      risk_score,
-      reasons,
+      classification: 'SUSPICIOUS',
+      risk_score: 50,
+      reasons: ['AI analysis failed. Using fallback checks.'],
       recommendation:
         'This message may be unsafe. Verify before responding.',
     };
   }
 }
-
-/* ------------------------------------------------ */
-/* 🤖 CHATBOT                                      */
-/* ------------------------------------------------ */
 
 export async function askQuestion(input: { question: string }) {
   try {
@@ -200,10 +146,6 @@ export async function askQuestion(input: { question: string }) {
   }
 }
 
-/* ------------------------------------------------ */
-/* 📰 DAILY BRIEFING                                */
-/* ------------------------------------------------ */
-
 export async function getDailyBriefing() {
   return {
     briefing:
@@ -211,12 +153,6 @@ export async function getDailyBriefing() {
   };
 }
 
-/* ------------------------------------------------ */
-/* 🔊 TEXT TO SPEECH                                */
-/* ------------------------------------------------ */
-
-export async function textToSpeech(text: string) {
-  return {
-    media: null,
-  };
+export async function textToSpeech(_text: string) {
+  return { media: null };
 }
