@@ -1,16 +1,19 @@
 'use client';
 
-import { firebaseConfig } from '@/firebase/config';
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
+import { getFirestore, type Firestore } from 'firebase/firestore';
 
 /**
  * Initialize Firebase ONLY on the client.
- * Prevents Next.js build / prerender crashes.
+ * This file MUST NEVER throw — even with missing env vars.
  */
-export function initializeFirebase() {
-  // ⛔ Do NOT initialize Firebase on the server
+export function initializeFirebase(): {
+  firebaseApp: FirebaseApp | null;
+  auth: Auth | null;
+  firestore: Firestore | null;
+} {
+  // ⛔ Never run Firebase on the server
   if (typeof window === 'undefined') {
     return {
       firebaseApp: null,
@@ -19,45 +22,55 @@ export function initializeFirebase() {
     };
   }
 
-  let firebaseApp: FirebaseApp;
+  let firebaseApp: FirebaseApp | null = null;
 
-  if (!getApps().length) {
-    try {
-      // Try automatic initialization (Firebase App Hosting / prod)
-      firebaseApp = initializeApp();
-    } catch (error) {
-      // Fallback to manual config (local dev / Vercel)
-      if (process.env.NODE_ENV === 'production') {
-        console.warn(
-          'Automatic Firebase initialization failed. Falling back to firebaseConfig.',
-          error
-        );
+  try {
+    if (!getApps().length) {
+      // 🔹 Attempt automatic initialization (Firebase App Hosting)
+      try {
+        firebaseApp = initializeApp();
+      } catch {
+        // 🔹 Manual fallback (Vercel / local)
+        const { firebaseConfig } = require('@/firebase/config');
+
+        // If config is missing, silently skip
+        if (!firebaseConfig || !firebaseConfig.apiKey) {
+          console.warn('Firebase config missing. Skipping Firebase init.');
+          return {
+            firebaseApp: null,
+            auth: null,
+            firestore: null,
+          };
+        }
+
+        firebaseApp = initializeApp(firebaseConfig);
       }
-      firebaseApp = initializeApp(firebaseConfig);
+    } else {
+      firebaseApp = getApp();
     }
-  } else {
-    firebaseApp = getApp();
+
+    // 🔐 Safely return SDKs
+    return {
+      firebaseApp,
+      auth: getAuth(firebaseApp),
+      firestore: getFirestore(firebaseApp),
+    };
+  } catch (err) {
+    // ❗ NEVER throw — this prevents build crashes
+    console.warn('Firebase initialization failed safely:', err);
+
+    return {
+      firebaseApp: null,
+      auth: null,
+      firestore: null,
+    };
   }
-
-  return getSdks(firebaseApp);
 }
 
-/**
- * Safely return Firebase SDKs
- */
-export function getSdks(firebaseApp: FirebaseApp): {
-  firebaseApp: FirebaseApp;
-  auth: Auth;
-  firestore: Firestore;
-} {
-  return {
-    firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp),
-  };
-}
+/* ------------------------------------------------ */
+/* Re-exports (safe — do not modify)                 */
+/* ------------------------------------------------ */
 
-// Re-exports (unchanged)
 export * from './provider';
 export * from './client-provider';
 export * from './firestore/use-collection';
