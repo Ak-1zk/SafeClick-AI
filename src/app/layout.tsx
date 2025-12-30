@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Toaster } from "@/components/ui/toaster";
-import { FirebaseClientProvider } from "@/firebase";
 import "./globals.css";
+import ClientProviders from "@/components/client-providers";
 
 export const metadata: Metadata = {
   title: "SafeClick AI",
@@ -21,7 +21,6 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
-        {/* Fonts only – NO favicon links here */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
@@ -34,11 +33,12 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <FirebaseClientProvider>
+        <ClientProviders>
           {children}
           <Toaster />
-        </FirebaseClientProvider>
+        </ClientProviders>
       </body>
     </html>
   );
 }
+
