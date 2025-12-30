@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import Image from 'next/image';
-import { textToSpeech } from '@/app/actions';
+import { textToSpeech } from '../../app/actions';
 
 interface ChatbotProps {
   messages: ChatMessage[];
