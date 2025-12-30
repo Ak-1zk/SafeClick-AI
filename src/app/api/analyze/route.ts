@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// ✅ REQUIRED: Gemini SDK works only on Node.js runtime
+// ✅ Gemini SDK requires Node.js runtime
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
@@ -11,8 +11,8 @@ export async function POST(req: Request) {
     if (!message || typeof message !== "string") {
       return NextResponse.json(
         {
-          classification: "SUSPICIOUS",
-          risk_score: 50,
+          classification: "UNKNOWN",
+          risk_score: 0,
           reasons: ["No valid input provided"],
           recommendation: "Provide a valid input for analysis.",
         },
@@ -25,8 +25,8 @@ export async function POST(req: Request) {
       console.error("❌ GEMINI_API_KEY missing");
       return NextResponse.json(
         {
-          classification: "SUSPICIOUS",
-          risk_score: 60,
+          classification: "UNKNOWN",
+          risk_score: 0,
           reasons: ["AI service not configured"],
           recommendation: "Try again later.",
         },
@@ -34,17 +34,17 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ Correct SDK usage (NO gemini/ prefix, NO -latest suffix)
+    // ✅ FREE-TIER SAFE MODEL
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash", // ✅ Latest recommended stable model
+      model: "gemini-1.5-flash",
     });
 
     const prompt = `
 You are a cybersecurity expert.
 
 Return ONLY valid JSON.
-DO NOT include markdown or extra text.
+DO NOT include markdown or explanations.
 
 FORMAT:
 {
@@ -65,18 +65,39 @@ ${message}
       throw new Error("Empty response from Gemini");
     }
 
-    const parsed = JSON.parse(text);
+    // ✅ SAFE JSON EXTRACTION
+    let parsed;
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("No JSON found");
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch (err) {
+      console.error("❌ Invalid Gemini JSON:", text);
+      throw err;
+    }
 
     return NextResponse.json(parsed);
-  } catch (error) {
+  } catch (error: any) {
     console.error("🔥 Gemini error:", error);
 
-    // 🔒 Hard fallback (UI never breaks)
+    // ✅ FREE-TIER RATE LIMIT HANDLING
+    if (error?.status === 429) {
+      return NextResponse.json({
+        classification: "UNKNOWN",
+        risk_score: 0,
+        reasons: ["AI analysis temporarily unavailable (free-tier limit reached)"],
+        recommendation:
+          "Please try again later. This does not mean the content is unsafe.",
+      });
+    }
+
+    // 🔒 GENERAL FAILSAFE
     return NextResponse.json({
-      classification: "SUSPICIOUS",
-      risk_score: 60,
-      reasons: ["AI analysis failed or invalid response"],
-      recommendation: "Proceed with caution and verify manually.",
+      classification: "UNKNOWN",
+      risk_score: 0,
+      reasons: ["AI analysis failed"],
+      recommendation: "Unable to analyze right now. Verify manually.",
     });
   }
 }
+
