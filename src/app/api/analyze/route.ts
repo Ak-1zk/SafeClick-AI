@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const response = await fetch(
+    const geminiRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
       {
         method: "POST",
@@ -37,14 +37,23 @@ export async function POST(req: Request) {
       }
     );
 
-    const data = await response.json();
+    const geminiData = await geminiRes.json();
 
-    const reply =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "No response from AI";
+    // 🔍 Robust extraction (handles all Gemini formats)
+    let reply =
+      geminiData?.candidates?.[0]?.content?.parts
+        ?.map((p: any) => p.text)
+        ?.join(" ");
+
+    if (!reply || reply.trim() === "") {
+      reply =
+        geminiData?.candidates?.[0]?.content?.text ||
+        "AI responded, but no readable text was returned.";
+    }
 
     return NextResponse.json({ reply });
   } catch (error) {
+    console.error("Gemini API error:", error);
     return NextResponse.json(
       { error: "AI processing failed" },
       { status: 500 }
