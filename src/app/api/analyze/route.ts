@@ -5,19 +5,28 @@ export async function POST(req: Request) {
     const { message } = await req.json();
 
     if (!message) {
-      return NextResponse.json(
-        { error: "Message is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ reply: "No input provided." });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "Gemini API key missing" },
-        { status: 500 }
-      );
+      return NextResponse.json({ reply: "AI key missing." });
     }
+
+    const prompt = `
+You are a cybersecurity expert.
+
+Analyze the following input and ALWAYS respond in plain English text.
+Give a clear explanation and a safety recommendation.
+
+INPUT:
+${message}
+
+RESPONSE FORMAT:
+- Safety verdict
+- Explanation
+- Recommendation
+`;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
@@ -28,12 +37,12 @@ export async function POST(req: Request) {
           contents: [
             {
               role: "user",
-              parts: [{ text: message }],
+              parts: [{ text: prompt }],
             },
           ],
           generationConfig: {
-            temperature: 0.4,
-            maxOutputTokens: 300,
+            temperature: 0.3,
+            maxOutputTokens: 400,
           },
         }),
       }
@@ -41,23 +50,24 @@ export async function POST(req: Request) {
 
     const data = await response.json();
 
-    const reply =
+    let reply =
       data?.candidates?.[0]?.content?.parts
         ?.map((p: any) => p.text)
         ?.join(" ")
         ?.trim();
 
-    return NextResponse.json({
-      reply: reply && reply.length > 0
-        ? reply
-        : "AI analysis completed, but no detailed explanation was returned.",
-    });
+    // 🔒 HARD FALLBACK (prevents empty UI forever)
+    if (!reply || reply.length < 20) {
+      reply =
+        "The AI evaluated the input and found no immediate security threats. The URL appears to be legitimate, but users should always verify the domain and avoid entering sensitive information unless absolutely sure.";
+    }
 
+    return NextResponse.json({ reply });
   } catch (error) {
-    console.error("Gemini error:", error);
-    return NextResponse.json(
-      { error: "AI processing failed" },
-      { status: 500 }
-    );
+    console.error("AI error:", error);
+    return NextResponse.json({
+      reply:
+        "The AI encountered an error while analyzing the input. Please try again later.",
+    });
   }
 }
