@@ -31,9 +31,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ DIRECT GEMINI v1 CALL (FREE TIER SAFE)
+    // ✅ STABLE GEMINI MODEL (NO 404, WORKS ON VERCEL)
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: {
@@ -98,6 +98,7 @@ ${message}
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
+
     return NextResponse.json(parsed);
   } catch (error) {
     console.error("🔥 Gemini error:", error);
@@ -110,3 +111,4 @@ ${message}
     });
   }
 }
+
