@@ -33,16 +33,13 @@ export async function POST(req: Request) {
       );
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    
-    // ✅ Use generationConfig to FORCE JSON output
-    // This prevents the AI from adding "```json" blocks or extra text
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      generationConfig: {
-        responseMimeType: "application/json",
-      },
-    });
+  // Use 'gemini-2.5-flash' (current stable) or 'gemini-3-flash-preview' (latest)
+  model: "gemini-2.5-flash", 
+  generationConfig: {
+    responseMimeType: "application/json",
+  },
+});
 
     const prompt = `
       You are a cybersecurity expert analyzing the following input for potential security risks: "${message}"
