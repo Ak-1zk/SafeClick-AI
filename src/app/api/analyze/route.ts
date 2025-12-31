@@ -1,76 +1,45 @@
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
     const { message } = await req.json();
-
-    if (!message || typeof message !== "string") {
-      return NextResponse.json(
-        {
-          classification: "UNKNOWN",
-          risk_score: 0,
-          reasons: ["No valid input provided"],
-          recommendation: "Provide a valid input.",
-        },
-        { status: 400 }
-      );
-    }
-
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        {
-          classification: "UNKNOWN",
-          risk_score: 0,
-          reasons: ["GEMINI_API_KEY missing"],
-          recommendation: "Server configuration error.",
-        },
-        { status: 500 }
-      );
-    }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+    if (!apiKey) throw new Error("GEMINI_API_KEY missing");
+
+    const ai = new GoogleGenAI({ apiKey });
+
+    // Use specific Gemini 3 strings for best results
+    const model = 'gemini-3-pro-preview';
+
+    const config = {
+      thinkingConfig: { thinkingLevel: 'HIGH' },
+      systemInstruction: [{ 
+        text: "Analyze URL. Return ONLY JSON: {classification, risk_score, reasons, recommendation}" 
+      }],
+      responseMimeType: "application/json"
+    };
+
+    const result = await ai.models.generateContent({
+      model: model as any,
+      config: config as any,
+      contents: [{ role: 'user', parts: [{ text: message }] }],
     });
 
-    const prompt = `
-You are a cybersecurity expert.
+    // Access text property safely
+    const responseText = result.text || "";
+    if (!responseText) throw new Error("No text returned from AI");
 
-Return ONLY valid JSON.
-NO markdown. NO explanation.
+    return NextResponse.json(JSON.parse(responseText));
 
-FORMAT:
-{
-  "classification": "SAFE | SUSPICIOUS | MALICIOUS",
-  "risk_score": number (0-100),
-  "reasons": string[],
-  "recommendation": string
-}
-
-INPUT:
-${message}
-`;
-
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-
-    if (!text) throw new Error("Empty Gemini response");
-
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error("Invalid JSON");
-
-    return NextResponse.json(JSON.parse(match[0]));
-  } catch (error) {
-    console.error("🔥 Gemini error:", error);
+  } catch (error: any) {
+    console.error("🔥 Error details:", error);
     return NextResponse.json({
-      classification: "UNKNOWN",
-      risk_score: 0,
-      reasons: ["AI analysis failed"],
-      recommendation: "Verify manually.",
-    });
+      classification: "ERROR",
+      reasons: [error.message]
+    }, { status: 500 });
   }
 }
