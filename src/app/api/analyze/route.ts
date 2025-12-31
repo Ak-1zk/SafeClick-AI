@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const runtime = "nodejs";
 
@@ -31,21 +32,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ STABLE GEMINI MODEL (NO 404, WORKS ON VERCEL)
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text: `
+    // ✅ OFFICIAL SDK — NO 404, NO ENDPOINT ISSUES
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+    });
+
+    const prompt = `
 You are a cybersecurity expert.
 
 Return ONLY valid JSON.
@@ -61,37 +54,16 @@ FORMAT:
 
 INPUT:
 ${message}
-`,
-                },
-              ],
-            },
-          ],
-        }),
-      }
-    );
+`;
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return NextResponse.json({
-          classification: "UNKNOWN",
-          risk_score: 0,
-          reasons: ["Free-tier limit reached"],
-          recommendation: "Please try again later.",
-        });
-      }
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
 
-      throw new Error(`Gemini API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const text =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-
-    if (!text) {
+    if (!text || text.length < 20) {
       throw new Error("Empty Gemini response");
     }
 
-    // ✅ SAFE JSON EXTRACTION
+    // ✅ Extract JSON safely
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error("Invalid JSON returned by Gemini");
@@ -111,4 +83,3 @@ ${message}
     });
   }
 }
-
