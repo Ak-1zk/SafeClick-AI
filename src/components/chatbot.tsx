@@ -35,7 +35,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import Image from 'next/image';
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown from 'react-markdown';
 
 interface ChatbotProps {
   messages: ChatMessage[];
@@ -55,13 +55,11 @@ export default function Chatbot({
   const [isClient, setIsClient] = useState(false);
 
   /* ---------------- CLIENT CHECK ---------------- */
-
   useEffect(() => {
     setIsClient(true);
   }, []);
 
   /* ---------------- SPEECH TO TEXT ---------------- */
-
   const {
     transcript,
     listening,
@@ -79,7 +77,6 @@ export default function Chatbot({
   const stopListening = () => SpeechRecognition.stopListening();
 
   /* ---------------- AUTO SCROLL ---------------- */
-
   useEffect(() => {
     const viewport =
       scrollAreaRef.current?.querySelector(
@@ -94,7 +91,6 @@ export default function Chatbot({
   }, [messages, isBotReplying]);
 
   /* ---------------- SEND MESSAGE ---------------- */
-
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() && !uploadedImage) return;
@@ -106,7 +102,6 @@ export default function Chatbot({
   };
 
   /* ---------------- IMAGE UPLOAD ---------------- */
-
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -123,7 +118,6 @@ export default function Chatbot({
   }
 
   /* ---------------- UI ---------------- */
-
   return (
     <Card className="glass-card flex h-[70vh] flex-col">
       <CardHeader>
@@ -172,9 +166,17 @@ export default function Chatbot({
                       className="mb-2 rounded-md"
                     />
                   )}
-                  <p className="text-sm whitespace-pre-wrap">
-                    {message.content}
-                  </p>
+
+                  {/* ✅ MARKDOWN FOR AI, PLAIN TEXT FOR USER */}
+                  {message.role === 'assistant' ? (
+                    <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
+                      {message.content}
+                    </ReactMarkdown>
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap">
+                      {message.content}
+                    </p>
+                  )}
                 </div>
 
                 {/* User Avatar */}
