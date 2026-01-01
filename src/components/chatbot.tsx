@@ -19,10 +19,21 @@ import type { ChatMessage } from '@/app/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import Image from 'next/image';
 
 interface ChatbotProps {
@@ -63,6 +74,7 @@ export default function Chatbot({
 
   const startListening = () =>
     SpeechRecognition.startListening({ continuous: true });
+
   const stopListening = () => SpeechRecognition.stopListening();
 
   /* ---------------- AUTO SCROLL ---------------- */
@@ -133,7 +145,8 @@ export default function Chatbot({
                     : 'justify-start'
                 )}
               >
-                {message.role === 'model' && (
+                {/* Assistant Avatar */}
+                {message.role === 'assistant' && (
                   <Avatar className="h-8 w-8 border">
                     <AvatarFallback>
                       <Bot className="h-4 w-4" />
@@ -163,6 +176,7 @@ export default function Chatbot({
                   </p>
                 </div>
 
+                {/* User Avatar */}
                 {message.role === 'user' && (
                   <Avatar className="h-8 w-8 border">
                     <AvatarFallback>
@@ -173,6 +187,7 @@ export default function Chatbot({
               </div>
             ))}
 
+            {/* Bot typing indicator */}
             {isBotReplying && (
               <div className="flex items-start gap-3">
                 <Avatar className="h-8 w-8 border">
@@ -221,7 +236,9 @@ export default function Chatbot({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={
-              listening ? 'Listening…' : 'Ask about phishing, malware, or links…'
+              listening
+                ? 'Listening…'
+                : 'Ask about phishing, malware, or links…'
             }
             disabled={isBotReplying}
           />
