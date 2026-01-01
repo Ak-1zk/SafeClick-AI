@@ -35,14 +35,10 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import Image from 'next/image';
-
 import dynamic from 'next/dynamic';
 
-// ✅ Vercel-safe, TS-safe, production-safe
-const ReactMarkdown = dynamic(() => import('react-markdown'), {
-  ssr: false,
-});
-
+// ✅ Vercel-safe Markdown import
+const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false });
 
 interface ChatbotProps {
   messages: ChatMessage[];
@@ -75,11 +71,17 @@ export default function Chatbot({
   } = useSpeechRecognition();
 
   useEffect(() => {
-    setInput(transcript);
-  }, [transcript]);
+    if (browserSupportsSpeechRecognition) {
+      setInput(transcript);
+    }
+  }, [transcript, browserSupportsSpeechRecognition]);
 
-  const startListening = () =>
-    SpeechRecognition.startListening({ continuous: true });
+  const startListening = () => {
+    if (browserSupportsSpeechRecognition) {
+      SpeechRecognition.startListening({ continuous: true });
+    }
+  };
+
   const stopListening = () => SpeechRecognition.stopListening();
 
   /* ---------------- AUTO SCROLL ---------------- */
@@ -142,8 +144,8 @@ export default function Chatbot({
                     : 'justify-start'
                 )}
               >
-                {/* ✅ ASSISTANT AVATAR (FIXED ROLE) */}
-                {message.role === 'assistant' && (
+                {/* ✅ MODEL (AI) AVATAR */}
+                {message.role === 'model' && (
                   <Avatar className="h-8 w-8 border">
                     <AvatarFallback>
                       <Bot className="h-4 w-4" />
@@ -169,18 +171,15 @@ export default function Chatbot({
                     />
                   )}
 
-                  {message.role === 'assistant' ? (
-  <div className="prose prose-sm dark:prose-invert max-w-none">
-    <ReactMarkdown>
-      {message.content}
-    </ReactMarkdown>
-  </div>
-) : (
-  <p className="text-sm whitespace-pre-wrap">
-    {message.content}
-  </p>
-)}
-
+                  {message.role === 'model' ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap">
+                      {message.content}
+                    </p>
+                  )}
                 </div>
 
                 {/* USER AVATAR */}
