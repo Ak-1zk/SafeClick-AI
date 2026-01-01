@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     const ai = new GoogleGenAI({ apiKey });
 
     // ✅ Free + stable model (recommended)
-    const modelId = "gemini-2.5-flash-lite";
+    const model = "gemini-3-flash-preview"; // Or "gemini-3-pro-preview"
 
     const result = await ai.models.generateContent({
       model: modelId,
