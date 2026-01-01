@@ -6,40 +6,68 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
   try {
     const { message } = await req.json();
-    const apiKey = process.env.GEMINI_API_KEY;
 
-    if (!apiKey) throw new Error("GEMINI_API_KEY missing");
+    if (!message) {
+      return NextResponse.json(
+        { error: "Message is required" },
+        { status: 400 }
+      );
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY missing");
+    }
 
     const ai = new GoogleGenAI({ apiKey });
 
-    // Use specific Gemini 3 strings for best results
-   const model = 'gemini-2.5-flash-lite';
-
-    const config = {
-      thinkingConfig: { thinkingLevel: 'HIGH' },
-      systemInstruction: [{ 
-        text: "Analyze URL. Return ONLY JSON: {classification, risk_score, reasons, recommendation}" 
-      }],
-      responseMimeType: "application/json"
-    };
+    // ✅ Free + stable model (recommended)
+    const modelId = "gemini-2.5-flash-lite";
 
     const result = await ai.models.generateContent({
-      model: model as any,
-      config: config as any,
-      contents: [{ role: 'user', parts: [{ text: message }] }],
+      model: modelId,
+      config: {
+        responseMimeType: "application/json",
+        thinkingConfig: { thinkingLevel: "LOW" }, // HIGH may cause quota issues
+        systemInstruction: [
+          {
+            text:
+              "Analyze the URL or text. Return ONLY valid JSON in this format: " +
+              "{ classification, risk_score, reasons, recommendation }"
+          }
+        ]
+      } as any,
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: message }]
+        }
+      ]
     });
 
-    // Access text property safely
-    const responseText = result.text || "";
-    if (!responseText) throw new Error("No text returned from AI");
+    const responseText = result.text;
+    if (!responseText) {
+      throw new Error("No response text returned from Gemini");
+    }
 
     return NextResponse.json(JSON.parse(responseText));
 
   } catch (error: any) {
-    console.error("🔥 Error details:", error);
-    return NextResponse.json({
-      classification: "ERROR",
-      reasons: [error.message]
-    }, { status: 500 });
+    console.error("🔥 Analyze API Error:", error);
+
+    if (error?.status === 429) {
+      return NextResponse.json(
+        { error: "Daily limit reached. Please try again later." },
+        { status: 429 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        classification: "ERROR",
+        reasons: [error.message || "Internal server error"]
+      },
+      { status: 500 }
+    );
   }
 }
