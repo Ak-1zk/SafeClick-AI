@@ -54,8 +54,7 @@ It combines **advanced AI-driven analysis** with **rule-based fallback security 
 - **Deployment:** Vercel  
 
 ---
-
-##👥 Team Members / Authors
+👥 Team Members / Authors
 
 Iqlas Tharannum
 
