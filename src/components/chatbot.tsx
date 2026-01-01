@@ -19,11 +19,30 @@ import type { ChatMessage } from '@/app/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import Image from 'next/image';
+
+import dynamic from 'next/dynamic';
+
+// ✅ Vercel-safe, TS-safe, production-safe
+const ReactMarkdown = dynamic(() => import('react-markdown'), {
+  ssr: false,
+});
+
 
 interface ChatbotProps {
   messages: ChatMessage[];
@@ -43,13 +62,11 @@ export default function Chatbot({
   const [isClient, setIsClient] = useState(false);
 
   /* ---------------- CLIENT CHECK ---------------- */
-
   useEffect(() => {
     setIsClient(true);
   }, []);
 
   /* ---------------- SPEECH TO TEXT ---------------- */
-
   const {
     transcript,
     listening,
@@ -66,7 +83,6 @@ export default function Chatbot({
   const stopListening = () => SpeechRecognition.stopListening();
 
   /* ---------------- AUTO SCROLL ---------------- */
-
   useEffect(() => {
     const viewport =
       scrollAreaRef.current?.querySelector(
@@ -81,7 +97,6 @@ export default function Chatbot({
   }, [messages, isBotReplying]);
 
   /* ---------------- SEND MESSAGE ---------------- */
-
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() && !uploadedImage) return;
@@ -93,7 +108,6 @@ export default function Chatbot({
   };
 
   /* ---------------- IMAGE UPLOAD ---------------- */
-
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -105,12 +119,7 @@ export default function Chatbot({
     reader.readAsDataURL(file);
   };
 
-  if (isClient && !browserSupportsSpeechRecognition) {
-    console.warn("Browser doesn't support speech recognition.");
-  }
-
   /* ---------------- UI ---------------- */
-
   return (
     <Card className="glass-card flex h-[70vh] flex-col">
       <CardHeader>
@@ -133,7 +142,8 @@ export default function Chatbot({
                     : 'justify-start'
                 )}
               >
-                {message.role === 'model' && (
+                {/* ✅ ASSISTANT AVATAR (FIXED ROLE) */}
+                {message.role === 'assistant' && (
                   <Avatar className="h-8 w-8 border">
                     <AvatarFallback>
                       <Bot className="h-4 w-4" />
@@ -158,11 +168,22 @@ export default function Chatbot({
                       className="mb-2 rounded-md"
                     />
                   )}
-                  <p className="text-sm whitespace-pre-wrap">
-                    {message.content}
-                  </p>
+
+                  {message.role === 'assistant' ? (
+  <div className="prose prose-sm dark:prose-invert max-w-none">
+    <ReactMarkdown>
+      {message.content}
+    </ReactMarkdown>
+  </div>
+) : (
+  <p className="text-sm whitespace-pre-wrap">
+    {message.content}
+  </p>
+)}
+
                 </div>
 
+                {/* USER AVATAR */}
                 {message.role === 'user' && (
                   <Avatar className="h-8 w-8 border">
                     <AvatarFallback>
@@ -173,6 +194,7 @@ export default function Chatbot({
               </div>
             ))}
 
+            {/* BOT TYPING INDICATOR */}
             {isBotReplying && (
               <div className="flex items-start gap-3">
                 <Avatar className="h-8 w-8 border">
@@ -221,7 +243,9 @@ export default function Chatbot({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={
-              listening ? 'Listening…' : 'Ask about phishing, malware, or links…'
+              listening
+                ? 'Listening…'
+                : 'Ask about phishing, malware, or links…'
             }
             disabled={isBotReplying}
           />
