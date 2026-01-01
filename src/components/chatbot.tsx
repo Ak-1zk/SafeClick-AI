@@ -35,6 +35,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import Image from 'next/image';
+import ReactMarkdown from "react-markdown";
 
 interface ChatbotProps {
   messages: ChatMessage[];
