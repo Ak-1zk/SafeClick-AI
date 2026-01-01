@@ -22,48 +22,49 @@ export default function Dashboard() {
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
   const [currentTab, setCurrentTab] = useState<AnalysisType>('url');
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-  {
-    id: `msg-${messageIdCounter++}`,
-    role: "assistant",
-    content:
-      "I'm Aegis AI, your security assistant. I can analyze URLs, emails, messages, and answer cybersecurity questions.",
-  },
-]);
-
+  // ✅ FIXED: Initialized as an empty array to remove the default welcome message
+  const [messages, setMessages] = useState<ChatMessage[]>([]); 
 
   const [isBotReplying, setIsBotReplying] = useState(false);
 
-  /* ---------- API CALL ---------- */
+  /* ---------- API CALLS ---------- */
 
+  // For General Chatbox
+  const chatWithAI = async (history: ChatMessage[]) => {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: history }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Chat failed');
+    return data;
+  };
+
+  // For Specialized Security Analysis
   const analyzeViaAPI = async (text: string): Promise<AnyAnalysis> => {
     const res = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: text }),
     });
-
     const data = await res.json();
-
-    if (!res.ok || data.error) {
-      throw new Error(data.error || 'Analysis failed');
-    }
-
+    if (!res.ok || data.error) throw new Error(data.error || 'Analysis failed');
     return data;
   };
 
-  /* ---------- URL / EMAIL / MESSAGE ---------- */
+  /* ---------- URL / EMAIL / MESSAGE HANDLERS ---------- */
 
   const handleAnalyzeUrl = async (url: string) => {
     try {
       setIsLoadingAnalysis(true);
       setAnalysis(null);
       setAnalysis(await analyzeViaAPI(url));
-    } catch {
+    } catch (err: any) {
       setAnalysis({
         classification: 'SUSPICIOUS',
         risk_score: 100,
-        reasons: ['Failed to analyze URL'],
+        reasons: [err.message || 'Failed to analyze URL'],
         recommendation: 'Please try again later.',
       });
     } finally {
@@ -76,11 +77,11 @@ export default function Dashboard() {
       setIsLoadingAnalysis(true);
       setAnalysis(null);
       setAnalysis(await analyzeViaAPI(email));
-    } catch {
+    } catch (err: any) {
       setAnalysis({
         classification: 'SUSPICIOUS',
         risk_score: 100,
-        reasons: ['Failed to analyze email'],
+        reasons: [err.message || 'Failed to analyze email'],
         recommendation: 'Please try again later.',
       });
     } finally {
@@ -88,16 +89,16 @@ export default function Dashboard() {
     }
   };
 
-  const handleAnalyzeMessage = async (message: string) => {
+  const handleAnalyzeMessage = async (msg: string) => {
     try {
       setIsLoadingAnalysis(true);
       setAnalysis(null);
-      setAnalysis(await analyzeViaAPI(message));
-    } catch {
+      setAnalysis(await analyzeViaAPI(msg));
+    } catch (err: any) {
       setAnalysis({
         classification: 'SUSPICIOUS',
         risk_score: 100,
-        reasons: ['Failed to analyze message'],
+        reasons: [err.message || 'Failed to analyze message'],
         recommendation: 'Please try again later.',
       });
     } finally {
@@ -105,7 +106,7 @@ export default function Dashboard() {
     }
   };
 
-  /* ---------- CHAT ---------- */
+  /* ---------- CHAT HANDLER ---------- */
 
   const handleSendMessage = async (content: string, photoDataUri?: string) => {
     const userMsg: ChatMessage = {
@@ -115,33 +116,37 @@ export default function Dashboard() {
       photoDataUri,
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setIsBotReplying(true);
 
     try {
-      const result = await analyzeViaAPI(content);
+      // ✅ Use the conversational chat API for the chatbox
+      const result = await chatWithAI(updatedMessages);
+      
       setMessages((prev) => [
-  ...prev,
-  {
-    id: `msg-${messageIdCounter++}`,
-    role: "assistant",
-    content: result.recommendation || "Analysis completed.",
-  },
-]);
+        ...prev,
+        {
+          id: `msg-${messageIdCounter++}`,
+          role: "assistant",
+          content: result.text || "I'm not sure how to respond to that.",
+        },
+      ]);
+    } catch (err: any) {
       setMessages((prev) => [
-  ...prev,
-  {
-    id: `msg-${messageIdCounter++}`,
-    role: "assistant",
-    content: "❌ Error contacting SafeClick AI",
-  },
-]);
+        ...prev,
+        {
+          id: `msg-${messageIdCounter++}`,
+          role: "assistant",
+          content: "❌ Error contacting Aegis AI. Please check your connection.",
+        },
+      ]);
     } finally {
       setIsBotReplying(false);
     }
   };
 
-  /* ---------- UI ---------- */
+  /* ---------- UI RENDER ---------- */
 
   return (
     <div className="flex flex-col gap-8">
@@ -182,7 +187,11 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      <Chatbot messages={messages} onSendMessage={handleSendMessage} isBotReplying={isBotReplying} />
+      <Chatbot 
+        messages={messages} 
+        onSendMessage={handleSendMessage} 
+        isBotReplying={isBotReplying} 
+      />
     </div>
   );
 }
