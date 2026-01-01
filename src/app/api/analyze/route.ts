@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     const ai = new GoogleGenAI({ apiKey });
 
     // Use specific Gemini 3 strings for best results
-    const model = 'gemini-3-pro-preview';
+   const model = 'gemini-2.5-flash-lite';
 
     const config = {
       thinkingConfig: { thinkingLevel: 'HIGH' },
