@@ -23,13 +23,14 @@ export default function Dashboard() {
   const [currentTab, setCurrentTab] = useState<AnalysisType>('url');
 
   const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: `msg-${messageIdCounter++}`,
-      role: 'model',
-      content:
-        "I'm Aegis AI, your security assistant. I can analyze URLs, emails, messages, and answer cybersecurity questions.",
-    },
-  ]);
+  {
+    id: `msg-${messageIdCounter++}`,
+    role: "assistant",
+    content:
+      "I'm Aegis AI, your security assistant. I can analyze URLs, emails, messages, and answer cybersecurity questions.",
+  },
+]);
+
 
   const [isBotReplying, setIsBotReplying] = useState(false);
 
@@ -120,22 +121,21 @@ export default function Dashboard() {
     try {
       const result = await analyzeViaAPI(content);
       setMessages((prev) => [
-        ...prev,
-        {
-          id: `msg-${messageIdCounter++}`,
-          role: 'model',
-          content: result.recommendation || 'Analysis completed.',
-        },
-      ]);
-    } catch {
+  ...prev,
+  {
+    id: `msg-${messageIdCounter++}`,
+    role: "assistant",
+    content: result.recommendation || "Analysis completed.",
+  },
+]);
       setMessages((prev) => [
-        ...prev,
-        {
-          id: `msg-${messageIdCounter++}`,
-          role: 'model',
-          content: '❌ Error contacting SafeClick AI',
-        },
-      ]);
+  ...prev,
+  {
+    id: `msg-${messageIdCounter++}`,
+    role: "assistant",
+    content: "❌ Error contacting SafeClick AI",
+  },
+]);
     } finally {
       setIsBotReplying(false);
     }
