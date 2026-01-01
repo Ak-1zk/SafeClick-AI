@@ -1,14 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { getDailyBriefing } from '@/app/actions'; // ✅ CORRECT IMPORT
 import { Loader2, Newspaper } from 'lucide-react';
 import {
   Card,
@@ -18,7 +16,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 
-// Simple markdown-to-HTML converter
+/* ---------------- Markdown Renderer ---------------- */
+
 const Markdown = ({ content }: { content: string }) => {
   const html = content
     .replace(
@@ -39,6 +38,8 @@ const Markdown = ({ content }: { content: string }) => {
   );
 };
 
+/* ---------------- Component ---------------- */
+
 export default function DailyBriefing() {
   const [briefing, setBriefing] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,9 +49,22 @@ export default function DailyBriefing() {
 
     setIsLoading(true);
     try {
-      const result = await getDailyBriefing();
-      setBriefing(result.briefing);
-    } catch (error) {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message:
+            'Give a short daily cybersecurity threat briefing with 2–3 points.',
+        }),
+      });
+
+      const data = await res.json();
+
+      setBriefing(
+        data.recommendation ||
+          'Stay alert today and avoid suspicious links and messages.'
+      );
+    } catch {
       setBriefing(
         'Unable to fetch the daily briefing at the moment. Please try again later.'
       );
