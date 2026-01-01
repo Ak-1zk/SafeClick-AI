@@ -26,7 +26,7 @@ export type AnyAnalysis = UrlAnalysis | EmailAnalysis | MessageAnalysis;
 
 export type ChatMessage = {
   id: string;
-  role: 'user' | 'model';
+  role: 'user' | 'assistant';
   content: string;
   photoDataUri?: string;
 };
