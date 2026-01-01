@@ -16,24 +16,34 @@ export async function POST(req: Request) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error("GEMINI_API_KEY missing");
+      console.error("❌ GEMINI_API_KEY is missing from environment variables");
+      return NextResponse.json(
+        { error: "Server configuration error" },
+        { status: 500 }
+      );
     }
 
+    // Initialize the new SDK
     const ai = new GoogleGenAI({ apiKey });
 
-    // ✅ Free + stable model (recommended)
-    const model = "gemini-3-flash-preview"; // Or "gemini-3-pro-preview"
+    /**
+     * ✅ OPTION A: Using Gemini 3 (Supports thinkingLevel)
+     * Use "gemini-3-flash-preview" or "gemini-3-pro-preview"
+     */
+    const activeModel = "gemini-3-flash-preview";
 
     const result = await ai.models.generateContent({
-      model: modelId,
+      model: activeModel, // Fixed: variable name must match the model string
       config: {
         responseMimeType: "application/json",
-        thinkingConfig: { thinkingLevel: "LOW" }, // HIGH may cause quota issues
+        // thinkingLevel is ONLY for gemini-3 models
+        thinkingConfig: { thinkingLevel: "LOW" }, 
         systemInstruction: [
           {
             text:
-              "Analyze the URL or text. Return ONLY valid JSON in this format: " +
-              "{ classification, risk_score, reasons, recommendation }"
+              "You are a cybersecurity expert. Analyze the URL or text for risks. " +
+              "Return ONLY valid JSON in this format: " +
+              "{ \"classification\": \"string\", \"risk_score\": number, \"reasons\": [], \"recommendation\": \"string\" }"
           }
         ]
       } as any,
@@ -45,29 +55,43 @@ export async function POST(req: Request) {
       ]
     });
 
+    // Extract text from the new SDK response structure
     const responseText = result.text;
+    
     if (!responseText) {
-      throw new Error("No response text returned from Gemini");
+      throw new Error("Gemini returned an empty response.");
     }
 
-    return NextResponse.json(JSON.parse(responseText));
+    // Clean text in case of markdown artifacts and parse
+    const cleanJson = responseText.replace(/```json|```/g, "").trim();
+    return NextResponse.json(JSON.parse(cleanJson));
 
   } catch (error: any) {
     console.error("🔥 Analyze API Error:", error);
 
-    if (error?.status === 429) {
+    // Specific handling for common API errors
+    const statusCode = error?.status || 500;
+    
+    if (statusCode === 429) {
       return NextResponse.json(
-        { error: "Daily limit reached. Please try again later." },
+        { error: "Rate limit reached. Please wait a few minutes before trying again." },
         { status: 429 }
+      );
+    }
+
+    if (statusCode === 400 && error.message.includes("Thinking level")) {
+      return NextResponse.json(
+        { error: "Model configuration mismatch. Please check thinkingLevel support." },
+        { status: 400 }
       );
     }
 
     return NextResponse.json(
       {
         classification: "ERROR",
-        reasons: [error.message || "Internal server error"]
+        reasons: [error.message || "An unexpected error occurred during analysis."]
       },
-      { status: 500 }
+      { status: statusCode }
     );
   }
 }
