@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { AnyAnalysis, ChatMessage, UrlAnalysis } from '@/app/types';
-import { analyzeUrl, analyzeEmail, analyzeMessage } from '@/app/actions';
+import type { AnyAnalysis, ChatMessage } from '@/app/types';
 
 import UrlAnalyzer from '@/components/url-analyzer';
 import EmailAnalyzer from '@/components/email-analyzer';
@@ -34,66 +33,111 @@ export default function Dashboard() {
 
   const [isBotReplying, setIsBotReplying] = useState(false);
 
-  /* ---------------- URL / EMAIL / MESSAGE ANALYSIS (UNCHANGED) ---------------- */
+  /* ---------------- COMMON ANALYSIS CALL (API ROUTE) ---------------- */
+
+  const callAnalyzeAPI = async (message: string) => {
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      throw new Error(data.error || 'AI analysis failed');
+    }
+
+    return data;
+  };
+
+  /* ---------------- URL / EMAIL / MESSAGE ANALYSIS ---------------- */
 
   const handleAnalyzeUrl = async (urlToAnalyze: string) => {
-    setIsLoadingAnalysis(true);
-    setAnalysis(null);
-    const result = await analyzeUrl({ url: urlToAnalyze });
-    setAnalysis(result);
-    setIsLoadingAnalysis(false);
+    try {
+      setIsLoadingAnalysis(true);
+      setAnalysis(null);
+
+      const result = await callAnalyzeAPI(urlToAnalyze);
+      setAnalysis(result);
+    } catch (err) {
+      setAnalysis({
+        classification: 'ERROR',
+        risk_score: 100,
+        reasons: ['Failed to analyze URL'],
+        recommendation: 'Please try again later.',
+      } as AnyAnalysis);
+    } finally {
+      setIsLoadingAnalysis(false);
+    }
   };
 
   const handleAnalyzeEmail = async (emailContent: string) => {
-    setIsLoadingAnalysis(true);
-    setAnalysis(null);
-    const result = await analyzeEmail({ emailContent });
-    setAnalysis(result);
-    setIsLoadingAnalysis(false);
+    try {
+      setIsLoadingAnalysis(true);
+      setAnalysis(null);
+
+      const result = await callAnalyzeAPI(emailContent);
+      setAnalysis(result);
+    } catch (err) {
+      setAnalysis({
+        classification: 'ERROR',
+        risk_score: 100,
+        reasons: ['Failed to analyze email'],
+        recommendation: 'Please try again later.',
+      } as AnyAnalysis);
+    } finally {
+      setIsLoadingAnalysis(false);
+    }
   };
 
   const handleAnalyzeMessage = async (messageContent: string) => {
-    setIsLoadingAnalysis(true);
-    setAnalysis(null);
-    const result = await analyzeMessage({ messageContent });
-    setAnalysis(result);
-    setIsLoadingAnalysis(false);
+    try {
+      setIsLoadingAnalysis(true);
+      setAnalysis(null);
+
+      const result = await callAnalyzeAPI(messageContent);
+      setAnalysis(result);
+    } catch (err) {
+      setAnalysis({
+        classification: 'ERROR',
+        risk_score: 100,
+        reasons: ['Failed to analyze message'],
+        recommendation: 'Please try again later.',
+      } as AnyAnalysis);
+    } finally {
+      setIsLoadingAnalysis(false);
+    }
   };
 
-  /* ---------------- CHATBOT (FIXED TO USE API ROUTE) ---------------- */
+  /* ---------------- CHATBOT (API ROUTE) ---------------- */
 
-  const handleSendMessage = async (content: string, photoDataUri?: string) => {
+  const handleSendMessage = async (content: string) => {
     const newUserMessage: ChatMessage = {
       id: `msg-${messageIdCounter++}`,
       role: 'user',
       content,
-      photoDataUri,
     };
 
     setMessages((prev) => [...prev, newUserMessage]);
     setIsBotReplying(true);
 
     try {
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: content,
-        }),
-      });
-
-      const data = await res.json();
+      const data = await callAnalyzeAPI(content);
 
       const botMessage: ChatMessage = {
         id: `msg-${messageIdCounter++}`,
         role: 'model',
-        content: data.reply || data.message || 'No response from AI',
+        content:
+          data.recommendation ||
+          data.message ||
+          'Analysis completed.',
       };
 
       setMessages((prev) => [...prev, botMessage]);
-    } catch (error) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
