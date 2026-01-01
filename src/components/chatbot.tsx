@@ -145,7 +145,8 @@ export default function Chatbot({
                 )}
               >
                 {/* ✅ MODEL (AI) AVATAR */}
-                {message.role === 'model' && (
+                {message.role === 'assistant' && (
+
                   <Avatar className="h-8 w-8 border">
                     <AvatarFallback>
                       <Bot className="h-4 w-4" />
@@ -171,7 +172,7 @@ export default function Chatbot({
                     />
                   )}
 
-                  {message.role === 'model' ? (
+                  {message.role === 'assistant' ? (
                     <div className="prose prose-sm dark:prose-invert max-w-none">
                       <ReactMarkdown>{message.content}</ReactMarkdown>
                     </div>
